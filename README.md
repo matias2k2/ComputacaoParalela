@@ -1,0 +1,2 @@
+# ComputacaoParalela
+ Aprendendo MPI
