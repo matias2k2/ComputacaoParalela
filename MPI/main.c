@@ -4,7 +4,7 @@
 #include <math.h>
 #include <mpi.h>
 
-#define ALEATORIO ((double)random() / (double)RAND_MAX)
+#define ALEATORIO ((double)rand() / (double)RAND_MAX)
 
 void preenche_aleatorio_LR(double **L, double **R, int nU, int nI, int nF) {
     srand(0);
@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* Determine rank of this processor */
     MPI_Comm_size(MPI_COMM_WORLD, &size); /* Determine total number of processors */
 
+    double **matriz;
     if (rank == 0) {
         char nome_arquivo[100];
         printf("\nDigite o nome do seu ficheiro :  ");
@@ -100,7 +101,7 @@ int main(int argc, char *argv[]) {
         fscanf(input_file, "%d", &numero_caracteristicas);
         fscanf(input_file, "%d %d %d", &numero_linhas, &numero_colunas, &numero_elementos_diferentes_de_zero);
 
-        double **matriz = (double **)malloc(numero_linhas * sizeof(double *));
+        matriz = (double **)malloc(numero_linhas * sizeof(double *));
         for (int i = 0; i < numero_linhas; i++) {
             matriz[i] = (double *)malloc(numero_colunas * sizeof(double));
         }
@@ -112,23 +113,24 @@ int main(int argc, char *argv[]) {
         }
 
         fclose(input_file);
+    }
 
-        // Broadcast the entire matrix A to all processes
-        for (int i = 0; i < numero_linhas; i++) {
-            MPI_Bcast(matriz[i], numero_colunas, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        }
+    MPI_Bcast(&numero_iteracoes, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&alfa, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&numero_caracteristicas, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&numero_linhas, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&numero_colunas, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&numero_elementos_diferentes_de_zero, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
+    if (rank != 0) {
+        matriz = (double **)malloc(numero_linhas * sizeof(double *));
         for (int i = 0; i < numero_linhas; i++) {
-            free(matriz[i]);
+            matriz[i] = (double *)malloc(numero_colunas * sizeof(double));
         }
-        free(matriz);
-    } else {
-        MPI_Bcast(&numero_iteracoes, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&alfa, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&numero_caracteristicas, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&numero_linhas, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&numero_colunas, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&numero_elementos_diferentes_de_zero, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    }
+
+    for (int i = 0; i < numero_linhas; i++) {
+        MPI_Bcast(matriz[i], numero_colunas, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
 
     double **L = (double **)malloc(numero_linhas * sizeof(double *));
@@ -190,9 +192,13 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < numero_caracteristicas; i++) {
         free(R[i]);
     }
+    for (int i = 0; i < numero_linhas; i++) {
+        free(matriz[i]);
+    }
     free(L);
     free(R);
     free(B);
+    free(matriz);
 
     MPI_Finalize();
 
