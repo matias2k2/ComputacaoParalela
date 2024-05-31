@@ -1,12 +1,7 @@
-all: main sisRecom.o main.o run
-main: sisRecom.o main.o
-	mpicc -o main sisRecom.o main.o 
+all: sisRecom-mpi
 
-sisRecom.o: sisRecom.c sisRecom.h
-	mpicc -g -c sisRecom.c
-	
-main.o: main.c sisRecom.h
-	mpicc -g -c main.c -fopenmp 
-run:
-	./main
+sisRecom-mpi: sisRecom-mpi.c
+	mpicc -fopenmp -o sisRecom-mpi sisRecom-mpi.c
 
+run: sisRecom-mpi
+	mpirun -np 2 ./sisRecom-mpi input.txt
